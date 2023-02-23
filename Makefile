@@ -1,4 +1,3 @@
-
 SHELL=/usr/bin/env bash
 
 ENV_PREFIX=export LD_LIBRARY_PATH=/usr/local/cuda/lib64/:$$LD_LIBRARY_PATH
@@ -45,6 +44,10 @@ scrape:
 				        		 --prelude ../coq-projects
 data/scrape-test.txt: $(TESTSCRAPES)
 	cat $(TESTSCRAPES) > $@
+
+%.scrape:
+	python src/scrape.py $(FLAGS) -c -j 1 --prelude=./ $* -o /dev/null || true
+
 CompCert/%.scrape: CompCert/%
 	python3 src/scrape.py $(FLAGS) -c -j 1 --prelude=./CompCert $* -o /dev/null || true
 

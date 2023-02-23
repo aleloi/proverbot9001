@@ -207,7 +207,7 @@ def nostdout():
 def nostderr():
     try:
         save_stderr = sys.stderr
-        sys.stderr = DummyFile()
+        #sys.stderr = DummyFile()
         yield
     finally:
         sys.stderr = save_stderr

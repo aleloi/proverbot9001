@@ -53,11 +53,14 @@ class Worker:
         self.remaining_commands: List[str] = []
         self.switch_dict = switch_dict
         self.axioms_already_added = False
+        eprint(f"[aleloi]: proof relevant: {self.args.careful}")
 
     def __enter__(self) -> 'Worker':
         self.coq = coq_serapy.SerapiInstance(['sertop', '--implicit'],
                                     None, str(self.args.prelude),
-                                    use_hammer=self.args.use_hammer)
+                                             use_hammer=self.args.use_hammer,
+                                             log_outgoing_messages='/home/alex/proverbot9001/serapy_outgoing'
+                                             )
         self.coq.quiet = True
         self.coq.verbose = self.args.verbose
         return self
@@ -65,6 +68,16 @@ class Worker:
         assert self.coq
         self.coq.kill()
         self.coq = None
+
+def get_switch(self) -> Optional[str]:
+        switch = None
+        try:
+            with (self.args.prelude / self.cur_project / "switch.txt").open('r') as sf:
+                switch = sf.read().strip()
+        except FileNotFoundError:
+            if self.switch_dict is not None:
+                switch = self.switch_dict[self.cur_project]
+        return switch
 
     def set_switch_from_proj(self) -> None:
         assert self.cur_project
@@ -84,7 +97,10 @@ class Worker:
         self.coq.kill()
         self.coq = coq_serapy.SerapiInstance(['sertop', '--implicit'],
                                     None, str(self.args.prelude / self.cur_project),
-                                    use_hammer=self.args.use_hammer)
+                                             use_hammer=self.args.use_hammer,
+                                             log_outgoing_messages='/home/alex/proverbot9001/serapy_outgoing',
+                                             switch=self.get_switch()
+                                             )
         self.coq.quiet = True
         self.coq.verbose = self.args.verbose
 
@@ -115,6 +131,7 @@ class Worker:
         # to load new includes, and set the opam switch
         if job_project != self.cur_project:
             self.reset_file_state()
+            eprint(f"[aleloi]: settich switch because job project '{job_project}' != cur project '{self.cur_project}'")
             self.cur_project = job_project
             self.set_switch_from_proj()
             self.restart_coq()
@@ -226,8 +243,17 @@ class Worker:
 
     def run_job(self, job: ReportJob, restart: bool = True) -> SearchResult:
         assert self.coq
-        self.run_into_job(job, restart, self.args.careful)
         job_project, job_file, job_module, job_lemma = job
+        try:
+            self.run_into_job(job, restart=restart, self.args.careful)
+        except (coq_serapy.CoqExn, AssertionError) as e:
+            search_status = SearchStatus.CRASHED
+            solution: List[TacticInteraction] = []
+            eprint(f"[aleloi]: CRASHED at job {job_file}:{coq_serapy.lemma_name_from_statement(job_lemma)}")
+            # return SearchResult(search_status, solution)
+            raise e
+
+
         initial_context: ProofContext = unwrap(self.coq.proof_context)
         if self.args.add_axioms and not self.axioms_already_added:
             self.axioms_already_added = True
