@@ -13,15 +13,15 @@ if [[ -f /etc/NIXOS ]]; then
 else
     # git submodule init
     # git submodule update
-    opam init -a --compiler=4.07.1 --disable-sandboxing
-    eval `opam config env`
-    opam update
-    # For Coq:
-    opam pin add coq 8.10.2
-    opam pin -y add menhir 20190626
-    # For SerAPI:
-    opam install -y coq-serapi
-    # Python dependencies
+    # opam init -a --compiler=4.07.1 --disable-sandboxing
+    # eval `opam config env`
+    # opam update
+    # # For Coq:
+    # opam pin -y add coq 8.10.2
+    # opam pin -y add menhir 20190626
+    # # For SerAPI:
+    # opam install -y coq-serapi
+    # # Python dependencies
     pip3 install --user -r requirements.txt
     pip3 install -e coq_serapy
     # For py03/dataloader

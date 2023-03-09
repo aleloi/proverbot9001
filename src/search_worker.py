@@ -59,7 +59,7 @@ class Worker:
         self.coq = coq_serapy.SerapiInstance(['sertop', '--implicit'],
                                     None, str(self.args.prelude),
                                              use_hammer=self.args.use_hammer,
-                                             log_outgoing_messages='/home/alex/proverbot9001/serapy_outgoing3'
+                                             #log_outgoing_messages='/home/alex/proverbot9001/serapy_outgoing3'
                                              )
         self.coq.quiet = True
         self.coq.verbose = self.args.verbose
@@ -98,7 +98,7 @@ class Worker:
         self.coq = coq_serapy.SerapiInstance(['sertop', '--implicit'],
                                     None, str(self.args.prelude / self.cur_project),
                                              use_hammer=self.args.use_hammer,
-                                             log_outgoing_messages='/home/alex/proverbot9001/serapy_outgoing',
+                                             #log_outgoing_messages='/home/alex/proverbot9001/serapy_outgoing',
                                              switch=self.get_switch()
                                              )
         self.coq.quiet = True
