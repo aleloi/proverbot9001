@@ -11,9 +11,9 @@ if [[ -f /etc/NIXOS ]]; then
         continue
     fi
 else
-    git submodule init
-    git submodule update
-    opam init -a --compiler=4.07.1
+    # git submodule init
+    # git submodule update
+    opam init -a --compiler=4.07.1 --disable-sandboxing
     eval `opam config env`
     opam update
     # For Coq:
