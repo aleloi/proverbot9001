@@ -59,7 +59,7 @@ class Worker:
         self.coq = coq_serapy.SerapiInstance(['sertop', '--implicit'],
                                     None, str(self.args.prelude),
                                              use_hammer=self.args.use_hammer,
-                                             log_outgoing_messages='/home/alex/proverbot9001/serapy_outgoing'
+                                             log_outgoing_messages='/home/alex/proverbot9001/serapy_outgoing3'
                                              )
         self.coq.quiet = True
         self.coq.verbose = self.args.verbose
@@ -69,7 +69,7 @@ class Worker:
         self.coq.kill()
         self.coq = None
 
-def get_switch(self) -> Optional[str]:
+    def get_switch(self) -> Optional[str]:
         switch = None
         try:
             with (self.args.prelude / self.cur_project / "switch.txt").open('r') as sf:
@@ -123,15 +123,17 @@ def get_switch(self) -> Optional[str]:
         for sec_or_mod, _ in reversed(self.coq.sm_stack):
             self.coq.run_stmt(f"Reset {sec_or_mod}.")
 
-    def run_into_job(self, job: ReportJob, restart_anomaly: bool, careful: bool) -> None:
+    def run_into_job(self, job: ReportJob, restart_anomaly: bool,
+                     careful: bool, always_restart: bool = False) -> None:
         assert self.coq
         assert job not in self.lemmas_encountered, "Jobs are out of order!"
         job_project, job_file, job_module, job_lemma = job
         # If we need to change projects, we'll have to reset the coq instance
         # to load new includes, and set the opam switch
-        if job_project != self.cur_project:
+        if job_project != self.cur_project or always_restart:
             self.reset_file_state()
-            eprint(f"[aleloi]: settich switch because job project '{job_project}' != cur project '{self.cur_project}'")
+            # eprint(f"[aleloi]: settich switch because job project '{job_project}' != cur project '{self.cur_project}'")
+            eprint(f"[aleloi]: restarting Coq just in case")
             self.cur_project = job_project
             self.set_switch_from_proj()
             self.restart_coq()
@@ -154,7 +156,7 @@ def get_switch(self) -> Optional[str]:
                                       self.remaining_commands)))
                     assert rest_commands, f"Couldn't find lemma {job_lemma}"
             except coq_serapy.CoqAnomaly:
-                if restart:
+                if restart_anomaly:
                     self.restart_coq()
                     self.reset_file_state()
                     self.enter_file(job_file)
@@ -168,8 +170,9 @@ def get_switch(self) -> Optional[str]:
                 if not careful:
                     eprint(f"Hit a problem, possibly due to admitting proofs! Restarting file with --careful...",
                            guard=self.args.verbose >= 1)
+                    self.restart_coq()
                     self.reset_file_state()
-                    self.exit_cur_file()
+                    #self.exit_cur_file()
                     self.enter_file(job_file)
                     self.run_into_job(job, restart_anomaly, True)
                     return
@@ -245,7 +248,7 @@ def get_switch(self) -> Optional[str]:
         assert self.coq
         job_project, job_file, job_module, job_lemma = job
         try:
-            self.run_into_job(job, restart=restart, self.args.careful)
+            self.run_into_job(job, restart_anomaly=restart, careful=self.args.careful)
         except (coq_serapy.CoqExn, AssertionError) as e:
             search_status = SearchStatus.CRASHED
             solution: List[TacticInteraction] = []

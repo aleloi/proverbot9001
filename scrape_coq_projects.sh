@@ -27,7 +27,7 @@ for project in math-comp; do #$(jq -r '.[55:]|.[].project_name' coqgym_projs_spl
 
     echo "./src/scrape.py -c --prelude=./coq-projects/$project $@ ${FILES} > /dev/null" >> coq-projects/$project/scrape.sh
     chmod u+x coq-projects/$project/scrape.sh
-    set -x
-    ./src/sbatch-retry.sh --cpus-per-task=${NTHREADS} -o "coq-projects/$project/scrape-output.out" "coq-projects/$project/scrape.sh"
-    set +x
+    #set -x
+    #./src/sbatch-retry.sh --cpus-per-task=${NTHREADS} -o "coq-projects/$project/scrape-output.out" "coq-projects/$project/scrape.sh"
+    #set +x
 done

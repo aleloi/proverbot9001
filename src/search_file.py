@@ -302,6 +302,7 @@ def remove_already_done_jobs(args: argparse.Namespace) -> None:
             except FileNotFoundError:
                 pass
 
+
 def search_file_multithreaded(args: argparse.Namespace,
                               predictor: TacticPredictor) -> None:
     global start_time
@@ -314,7 +315,10 @@ def search_file_multithreaded(args: argparse.Namespace,
                 try:
                     t = datetime.strptime(datestring, "%H:%M:%S.%f")
                 except ValueError:
-                    t = datetime.strptime(datestring, "%j day, %H:%M:%S.%f")
+                    if 'days' not in datestring:
+                        t = datetime.strptime(datestring, "%j day, %H:%M:%S.%f")
+                    else:
+                        t = datetime.strptime(datestring, "%j days, %H:%M:%S.%f")
                 start_time = datetime.now() - timedelta(days=t.day, hours=t.hour,
                                                         minutes=t.minute, seconds=t.second)
         except FileNotFoundError:
@@ -368,6 +372,26 @@ def search_file_multithreaded(args: argparse.Namespace,
                    for widx in range(num_threads)]
         for worker in workers:
             worker.start()
+
+        # def work ():
+        #     if all(not x.is_alive() for x in workers):
+        #         print("all WORKERS died")
+        #         eprint("all WORKERS died")
+        #         for x in workers:
+        #             x.kill()
+        #         manager.shutdown()
+        #         import os,signal
+        #         os.kill(os.getpid(), signal.SIGINT)
+        #         # sys.exit(1)
+        #     else:
+        #         num_alive = sum(x.is_alive() for x in workers)
+        #         print(f"{num_alive} / {len(workers)} WORKERS still alive")
+        #         eprint(f"{num_alive} / {len(workers)} WORKERS still alive")
+        #         print(f"Jobs left: {len(todo_jobs)}")
+        #         if len(todo_jobs) > 0:
+        #             threading.Timer(10, work).start()
+        # work()
+
         num_already_done = len(solved_jobs)
         os.makedirs(args.output_dir, exist_ok=True)
         with util.sighandler_context(signal.SIGINT, functools.partial(handle_interrupt, args)):
