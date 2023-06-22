@@ -105,6 +105,7 @@ def scrape_file(coqargs: List[str], args: argparse.Namespace,
                     eprint(f"Found existing scrape at {result_file}! Using it")
                 return result_file
     try:
+        print(f"[worker, scrape_file]: args.linerize={args.linearize}", file=sys.stderr)
         if args.linearize:
             commands = linearize_semicolons.get_linearized(args, coqargs, file_idx, filename)
         else:

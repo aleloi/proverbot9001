@@ -10,3 +10,4 @@ pathlib_revised
 sparse_list
 tensorboard
 maturin
+typeguard

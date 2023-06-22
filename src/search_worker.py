@@ -18,6 +18,12 @@ from util import unwrap, eprint, escape_lemma_name
 
 unnamed_goal_number: int = 0
 
+static_name_counter = 0
+def get_file_name():
+    global static_name_counter
+    static_name_counter += 1
+    return f"serapi_log_file_instance_{static_name_counter:>03d}"
+
 class ReportJob(NamedTuple):
     project_dir: str
     filename: str
@@ -57,7 +63,9 @@ class Worker:
     def __enter__(self) -> 'Worker':
         self.coq = coq_serapy.SerapiInstance(['sertop', '--implicit'],
                                     None, str(self.args.prelude),
-                                    use_hammer=self.args.use_hammer)
+                                             use_hammer=self.args.use_hammer,
+                                             log_outgoing_messages=get_file_name()
+                                             )
         self.coq.quiet = True
         self.coq.verbose = self.args.verbose
         return self
@@ -84,7 +92,9 @@ class Worker:
         self.coq.kill()
         self.coq = coq_serapy.SerapiInstance(['sertop', '--implicit'],
                                     None, str(self.args.prelude / self.cur_project),
-                                    use_hammer=self.args.use_hammer)
+                                             use_hammer=self.args.use_hammer,
+                                             log_outgoing_messages=get_file_name()
+                                             )
         self.coq.quiet = True
         self.coq.verbose = self.args.verbose
 

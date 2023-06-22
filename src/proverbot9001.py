@@ -212,6 +212,7 @@ def get_tactics(args: List[str]):
         stem = coq_serapy.get_stem(scraped.tactic)
         if stem != "":
             count[stem] += 1
+    #breakpoint()
     with (open(arg_values.dest, mode='w') if arg_values.dest != "-"
           else contextlib.nullcontext(sys.stdout)) as f:
         for tactic, tac_count in count.most_common(arg_values.num_tactics):
