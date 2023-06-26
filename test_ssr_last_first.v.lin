@@ -1,0 +1,18 @@
+cb5e3372cbeb201c38c647b6e0157c87
+From mathcomp Require Import all_ssreflect ssralg.
+
+
+
+
+Lemma last_first : True.
+
+Proof.
+{
+  have hej: True.
+  {
+    by [].
+  }
+  {
+    auto.
+  }
+}

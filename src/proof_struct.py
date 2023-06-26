@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Optional, Iterable
+from typing import List, Optional, Iterable, Dict
 from dataclasses import dataclass, field
 from typeguard import typechecked
 import copy
@@ -241,23 +241,18 @@ class Proof:
                 # Wasn't so simple: should make it into `Thens` based
                 # on the []-pattern?
                 #
-                # case Proof(tac=Intro(tac=before, items=items)) if before != Node('move'):
-                #     _, after = node.tac.coq.split('=>')
+                case Proof(tac=Intro(tac=before, items=items)) if before != Node('move'):
 
-                #     move_after_coq = f'move => {after}'
-                #     new_tac = Then(t1 = before,
-                #                    t2 = Intro(tac=Node('move'), items=items,
-                #                               coq=move_after_coq),
-                #                    coq = f'({before.coq}) ; {move_after_coq} ')
-                #     print(f"[proof, intro] made '{node.tac}' into '{new_tac}'.")
-                #     print(f"[proof, intro] made '{node.tac.coq}' into '{new_tac.coq}'.")
-                #     print(f"[proof, intro] made '{node.tac_str}' into '{new_tac.get_coq_str()}'")
-                #     node.tac = new_tac
-                #     node.tac_str = new_tac.get_coq_str()
+                    return handle_intro_brackets({'before': before,
+                                                  'items': items,
+                                                  #'after': after,
+                                                  'coq': coq,
+                                                  'node': node,
+                                                  'run_stmt': run_stmt,
+                                                  'transform_kids': transform_kids
+                                                  })
 
-                #     run_stmt(node.tac_str)
-                #     transform_kids(node.kids)
-                #     return node, True
+
 
                 # Default:
                 case Proof(tac=A, kids=kids, tac_str=tac_str):
@@ -357,3 +352,84 @@ class Proof:
                 res.tac_str = tac_str
                 res.tac = tac
                 return res
+
+@typechecked
+def handle_intro_brackets(d: Dict[str, Any]) -> Tuple[Proof, bool]:
+    before : Node = d['before']
+    items  : List[I_item] = d['items']
+    coq    : serapi_instance.SerapiInstance = d['coq']
+    #after  : str = d['after']
+    node   : Proof = d['node']
+    run_stmt = d['run_stmt']
+    transform_kids = d['transform_kids']
+
+    after : str
+    _, after = node.tac.coq.split('=>')
+
+    bracket : Optional[I_item] = next((it for it in items
+                                      if it.tp == 'bracket_pat'), None)
+    if bracket != None :
+        bracket_idx = items.index(bracket)
+        before_bracket = items[:bracket_idx]
+    if bracket is None or not all(x.tp == 'const' and x.value in ['/=', '//', '//=']
+                           for x in before_bracket
+                           ):
+
+        move_after_coq = f'move => {after}'
+        new_tac = Then(t1 = before,
+                       t2 = Intro(tac=Node('move'), items=items,
+                                  coq=move_after_coq),
+                       coq = f'({before.coq}) ; {move_after_coq} '
+                       )
+        print(f"[proof, intro] made '{node.tac}' into '{new_tac}'.")
+        print(f"[proof, intro] made '{node.tac.coq}' into '{new_tac.coq}'.")
+        print(f"[proof, intro] made '{node.tac_str}' into '{new_tac.get_coq_str()}'")
+        node.tac = new_tac
+        node.tac_str = new_tac.get_coq_str()
+
+        run_stmt(node.tac_str)
+        transform_kids(node.kids)
+        # normal move
+        return node, True
+
+
+    # Handle branching
+    tac1 = before
+    if before_bracket:
+        tac1_t1_coq = f'move => {" ".join(it.get_coq_str() for it in before_bracket)}'
+        tac1 = Then(t1 = before,
+                    t2 = Intro(tac=Node('move'),
+                               items=before_bracket,
+                               coq=tac1_t1_coq
+                               ),
+                    coq = f'({before.coq}) ; ({tac1_t1_coq})'
+                    )
+        branches = []
+        after_bracket = items[bracket_idx+1:]
+        for b_it in bracket.value:
+            b_it_coq_str = b_it.replace(',', '|').replace("'", "")
+            after_coq_str = ' '.join(x.get_coq_str() for x in after_bracket)
+            if b_it_coq_str.strip() == '':
+                b_it_coq_str = '[]'
+            coq_str = f'move => {b_it_coq_str} {after_coq_str}'
+
+            tac2 = Intro(tac=Node('move'), items=I_item.make_items(b_it) +
+                         copy.deepcopy(after_bracket),
+                         coq=coq_str
+                         )
+            branches.append(tac2)
+        thens_t2_coq = ' | '.join(branch.coq for branch in branches)
+
+        new_tac = Thens(t1 = tac1,
+                         t2s = branches,
+                         coq = f'({tac1.coq}) ; [{thens_t2_coq}]'
+                         )
+        print(f"[proof, intro] made '{node.tac}' into '{new_tac}'.")
+        print(f"[proof, intro] made '{node.tac.coq}' into '{new_tac.coq}'.")
+        print(f"[proof, intro] made '{node.tac_str}' into '{new_tac.get_coq_str()}'")
+
+        node.tac = new_tac
+        node.tac_str = node.tac.get_coq_str()
+        run_stmt(node.tac_str)
+        transform_kids(node.kids)
+        return node, True
