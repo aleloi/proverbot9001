@@ -1,12 +1,5 @@
-2a136fb6f16efa275080ea2ae69ad76c
 Lemma hej: forall (A B C: Prop), (A -> B -> C) -> A -> B -> C.
 
   intros A B C abc_fun a b.
-  apply abc_fun.
-  {
-    exact a.
-  }
-  {
-    exact b.
-  }
+  apply abc_fun; [exact a | exact b].
 Qed.

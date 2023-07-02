@@ -65,7 +65,8 @@ Canonical ratio_of_choiceType := Eval hnf in [choiceType of {ratio R}].
 
 Lemma denom_ratioP : forall f : ratio, f.2 != 0. 
   Proof.
-  by case.
+  case .
+  by [] .
 Qed.
 
 Definition ratio0 := (@mkRatio (0, 1) (oner_neq0 _)).
@@ -108,13 +109,18 @@ Lemma RatioP n d : Ratio_spec n d (Ratio n d) n d.
   Proof.
   rewrite  /Ratio  .
   rewrite  /insubd  .
-  ((case: insubP) ; (move => /=)) ; [move => x /= d_neq0 hx  | move => [] ] .
+  case: insubP .
   {
+    move => /= .
+    move => x /= d_neq0 hx  .
     have ->: x = @mkRatio (n, d) d_neq0 by apply: val_inj.
-    by constructor.
+    constructor .
   }
   {
-    rewrite negbK=> /eqP hx .
+    move => /= .
+    move => []  .
+    rewrite negbK .
+    move =>  /eqP hx .
     rewrite {2}hx .
     constructor .
     by [] .
@@ -212,8 +218,17 @@ Lemma equivf_trans : transitive equivf.
 
   Proof.
   move=> [x Px] [y Py] [z Pz] .
-  rewrite /equivf /= mulrC => /eqP xy /eqP yz .
-  by rewrite -(inj_eq (mulfI Px)) mulrA xy -mulrA yz mulrCA.
+  rewrite  /equivf  .
+  rewrite  /=  .
+  rewrite  mulrC  .
+  move =>  /eqP xy /eqP yz .
+  rewrite  - (inj_eq (mulfI Px))  .
+  rewrite  mulrA  .
+  rewrite  xy  .
+  rewrite  - mulrA  .
+  rewrite  yz  .
+  rewrite  mulrCA  .
+  by [] .
 Qed.
 
 (* we show that equivf is an equivalence *)
@@ -251,7 +266,8 @@ Lemma equivf_def (x y : ratio R) : x == y %[mod type]
                                     = (\n_x * \d_y == \d_x * \n_y).
 
   Proof.
-  by rewrite eqmodE.
+  rewrite eqmodE .
+  by [] .
 Qed.
 
 Lemma equivf_r x : \n_x * \d_(repr (\pi_type x)) = \d_x * \n_(repr (\pi_type x)).
@@ -275,7 +291,13 @@ Qed.
 Lemma numer0 x : (\n_x == 0) = (x == (ratio0 R) %[mod_eq equivf]).
 
   Proof.
-  by rewrite eqmodE /= !equivfE // mulr1 mulr0.
+  rewrite  eqmodE  .
+  rewrite  /=  .
+  rewrite  ! equivfE  .
+  rewrite  //  .
+  rewrite  mulr1  .
+  rewrite  mulr0  .
+  by [] .
 Qed.
 
 Lemma Ratio_numden : forall x, Ratio \n_x \d_x = x.
@@ -335,7 +357,11 @@ Lemma pi_add : {morph \pi : x y / addf x y >-> add x y}.
     rewrite  (AC (2*2)%AC (3*1*2*4)%AC)  .
     rewrite  (AC (2*2)%AC (3*2*1*4)%AC)  .
     rewrite  /=  .
-    by rewrite !equivf_l (ACl ((2*3)*(1*4))%AC) (ACl ((2*3)*(4*1))%AC)/=.
+    rewrite  ! equivf_l  .
+    rewrite  (ACl ((2*3)*(1*4))%AC)  .
+    rewrite  (ACl ((2*3)*(4*1))%AC)  .
+    rewrite  /=  .
+    by [] .
   }
   {
     rewrite  ? mulf_neq0  .
@@ -415,7 +441,31 @@ Lemma pi_opp : {morph \pi : x / oppf x >-> opp x}.
   rewrite  /equivf  .
   rewrite  /oppf  .
   rewrite  /=  .
-  by rewrite !numden_Ratio ?(domP,mulf_neq0) // mulNr mulrN -equivf_r.
+  rewrite  ! numden_Ratio  .
+  {
+    rewrite  ? (domP,mulf_neq0)  .
+    rewrite  //  .
+    rewrite  mulNr  .
+    rewrite  mulrN  .
+    rewrite  - equivf_r  .
+    by [] .
+  }
+  {
+    rewrite  ? (domP,mulf_neq0)  .
+    rewrite  //  .
+  }
+  {
+    rewrite  ? (domP,mulf_neq0)  .
+    rewrite  //  .
+  }
+  {
+    rewrite  ? (domP,mulf_neq0)  .
+    rewrite  //  .
+  }
+  {
+    rewrite  ? (domP,mulf_neq0)  .
+    rewrite  //  .
+  }
 Qed.
 Canonical pi_opp_morph := PiMorph1 pi_opp.
 
@@ -440,7 +490,10 @@ Lemma pi_mul : {morph \pi : x y / mulf x y >-> mul x y}.
     rewrite  ? mulf_neq0  .
     rewrite  ? domP  .
     rewrite  //  .
-    by rewrite mulrACA !equivf_r mulrACA.
+    rewrite  mulrACA  .
+    rewrite  ! equivf_r  .
+    rewrite  mulrACA  .
+    by [] .
   }
   {
     rewrite  ? mulf_neq0  .
@@ -578,7 +631,10 @@ Lemma addA : associative add.
     rewrite  ? domP  .
     rewrite  //  .
     rewrite  ! mulrDl  .
-    by rewrite !mulrA !addrA ![_ * _ * \d_x]mulrAC.
+    rewrite  ! mulrA  .
+    rewrite  ! addrA  .
+    rewrite  ! [(_ * _ * \d_x)] mulrAC  .
+    by [] .
   }
   {
     rewrite  ? mulf_neq0  .
@@ -664,7 +720,12 @@ Lemma add0_l : left_id 0%:F add.
   {
     rewrite  ? oner_eq0  .
     rewrite  //  .
-    by rewrite mul0r mul1r mulr1 add0r Ratio_numden.
+    rewrite  mul0r  .
+    rewrite  mul1r  .
+    rewrite  mulr1  .
+    rewrite  add0r  .
+    rewrite  Ratio_numden  .
+    by [] .
   }
   {
     rewrite  ? oner_eq0  .
@@ -689,7 +750,11 @@ Lemma addN_l : left_inverse 0%:F opp add.
   {
     rewrite  ? (oner_eq0, mulf_neq0, domP)  .
     rewrite  //  .
-    by rewrite mulr1 mulr0 mulNr addNr.
+    rewrite  mulr1  .
+    rewrite  mulr0  .
+    rewrite  mulNr  .
+    rewrite  addNr  .
+    by [] .
   }
   {
     rewrite  ? (oner_eq0, mulf_neq0, domP)  .
@@ -750,7 +815,75 @@ Lemma mulA : associative mul.
   elim/quotW=> y .
   elim/quotW=> z .
   rewrite !piE .
-  by rewrite /mulf !numden_Ratio ?mulf_neq0 ?domP // !mulrA.
+  rewrite  /mulf  .
+  rewrite  ! numden_Ratio  .
+  {
+    rewrite  ? mulf_neq0  .
+    rewrite  ? domP  .
+    rewrite  //  .
+    rewrite  ! mulrA  .
+    by [] .
+  }
+  {
+    rewrite  ? mulf_neq0  .
+    {
+      rewrite  ? domP  .
+      rewrite  //  .
+    }
+    {
+      rewrite  ? domP  .
+      rewrite  //  .
+    }
+    {
+      rewrite  ? domP  .
+      rewrite  //  .
+    }
+  }
+  {
+    rewrite  ? mulf_neq0  .
+    {
+      rewrite  ? domP  .
+      rewrite  //  .
+    }
+    {
+      rewrite  ? domP  .
+      rewrite  //  .
+    }
+    {
+      rewrite  ? domP  .
+      rewrite  //  .
+    }
+  }
+  {
+    rewrite  ? mulf_neq0  .
+    {
+      rewrite  ? domP  .
+      rewrite  //  .
+    }
+    {
+      rewrite  ? domP  .
+      rewrite  //  .
+    }
+    {
+      rewrite  ? domP  .
+      rewrite  //  .
+    }
+  }
+  {
+    rewrite  ? mulf_neq0  .
+    {
+      rewrite  ? domP  .
+      rewrite  //  .
+    }
+    {
+      rewrite  ? domP  .
+      rewrite  //  .
+    }
+    {
+      rewrite  ? domP  .
+      rewrite  //  .
+    }
+  }
 Qed.
 
 Lemma mulC : commutative mul.
@@ -760,7 +893,9 @@ Lemma mulC : commutative mul.
   elim/quotW=> y .
   rewrite  ! piE  .
   rewrite  /mulf  .
-  by rewrite [_ * (\d_x)]mulrC [_ * (\n_x)]mulrC.
+  rewrite  [(_ * (\d_x))] mulrC  .
+  rewrite  [(_ * (\n_x))] mulrC  .
+  by [] .
 Qed.
 
 Lemma mul1_l : left_id 1%:F mul.
@@ -769,7 +904,22 @@ Lemma mul1_l : left_id 1%:F mul.
   elim/quotW=> x .
   rewrite  ! piE  .
   rewrite  /mulf  .
-  by rewrite !numden_Ratio ?oner_eq0 // !mul1r Ratio_numden.
+  rewrite  ! numden_Ratio  .
+  {
+    rewrite  ? oner_eq0  .
+    rewrite  //  .
+    rewrite  ! mul1r  .
+    rewrite  Ratio_numden  .
+    by [] .
+  }
+  {
+    rewrite  ? oner_eq0  .
+    rewrite  //  .
+  }
+  {
+    rewrite  ? oner_eq0  .
+    rewrite  //  .
+  }
 Qed.
 
 Lemma mul_addl : left_distributive mul add.
@@ -792,7 +942,9 @@ Lemma mul_addl : left_distributive mul add.
     rewrite  ! (mulrDr, mulrDl)  .
     rewrite  (AC (3*(2*2))%AC (4*2*7*((1*3)*(6*5)))%AC)  .
     rewrite  /=  .
-    by rewrite [X in _ + X](AC (3*(2*2))%AC (4*6*7*((1*3)*(2*5)))%AC)/=.
+    rewrite  [(X) in (_ + X)] (AC (3*(2*2))%AC (4*6*7*((1*3)*(2*5)))%AC)  .
+    rewrite  /=  .
+    by [] .
   }
   {
     rewrite  ? mulf_neq0  .
@@ -1057,7 +1209,34 @@ Qed.
 Lemma nonzero1 : 1%:F != 0%:F :> type.
 
   Proof.
-  by rewrite piE equivfE !numden_Ratio ?mul1r ?oner_eq0.
+  rewrite  piE  .
+  rewrite  equivfE  .
+  rewrite  ! numden_Ratio  .
+  {
+    rewrite  ? mul1r  .
+    rewrite  ? oner_eq0  .
+    by [] .
+  }
+  {
+    rewrite  ? mul1r  .
+    rewrite  ? oner_eq0  .
+    by [] .
+  }
+  {
+    rewrite  ? mul1r  .
+    rewrite  ? oner_eq0  .
+    by [] .
+  }
+  {
+    rewrite  ? mul1r  .
+    rewrite  ? oner_eq0  .
+    by [] .
+  }
+  {
+    rewrite  ? mul1r  .
+    rewrite  ? oner_eq0  .
+    by [] .
+  }
 Qed.
 
 (* fracions form a commutative ring *)
@@ -1073,11 +1252,82 @@ Lemma mulV_l : forall a, a != 0%:F -> mul (inv a) a = 1%:F.
   Proof.
   elim/quotW=> x /= .
   rewrite !piE .
-  rewrite /equivf !numden_Ratio ?oner_eq0 // mulr1 mulr0=> nx0.
-  apply/eqmodP .
-  rewrite  /=  .
-  rewrite  equivfE  .
-  by rewrite !numden_Ratio ?(oner_eq0, mulf_neq0, domP) // !mulr1 mulrC.
+  rewrite  /equivf  .
+  rewrite  ! numden_Ratio  .
+  {
+    rewrite  ? oner_eq0  .
+    rewrite  //  .
+    rewrite  mulr1  .
+    rewrite  mulr0  .
+    move =>  nx0 .
+    apply/eqmodP .
+    rewrite  /=  .
+    rewrite  equivfE  .
+    rewrite  ! numden_Ratio  .
+    {
+      rewrite  ? (oner_eq0, mulf_neq0, domP)  .
+      rewrite  //  .
+      rewrite  ! mulr1  .
+      rewrite  mulrC  .
+      by [] .
+    }
+    {
+      rewrite  ? (oner_eq0, mulf_neq0, domP)  .
+      rewrite  //  .
+    }
+    {
+      rewrite  ? (oner_eq0, mulf_neq0, domP)  .
+      {
+        rewrite  //  .
+      }
+      {
+        rewrite  //  .
+      }
+      {
+        rewrite  //  .
+      }
+    }
+    {
+      rewrite  ? (oner_eq0, mulf_neq0, domP)  .
+      rewrite  //  .
+    }
+    {
+      rewrite  ? (oner_eq0, mulf_neq0, domP)  .
+      rewrite  //  .
+    }
+    {
+      rewrite  ? (oner_eq0, mulf_neq0, domP)  .
+      {
+        rewrite  //  .
+      }
+      {
+        rewrite  //  .
+      }
+      {
+        rewrite  //  .
+      }
+    }
+    {
+      rewrite  ? (oner_eq0, mulf_neq0, domP)  .
+      rewrite  //  .
+    }
+    {
+      rewrite  ? (oner_eq0, mulf_neq0, domP)  .
+      rewrite  //  .
+    }
+    {
+      rewrite  ? (oner_eq0, mulf_neq0, domP)  .
+      rewrite  //  .
+    }
+  }
+  {
+    rewrite  ? oner_eq0  .
+    rewrite  //  .
+  }
+  {
+    rewrite  ? oner_eq0  .
+    rewrite  //  .
+  }
 Qed.
 
 Lemma inv0 : inv 0%:F = 0%:F.
@@ -1093,13 +1343,23 @@ Lemma inv0 : inv 0%:F = 0%:F.
     rewrite  /insubd  .
     do 2?case: insubP .
     {
-      rewrite //= ?eqxx ?oner_eq0 // => u _ hu _ .
+      rewrite  //=  .
+      rewrite  ? eqxx  .
+      rewrite  ? oner_eq0  .
+      rewrite  //  .
     }
     {
-      rewrite //= ?eqxx ?oner_eq0 // => u _ hu _ .
+      rewrite  //=  .
+      rewrite  ? eqxx  .
+      rewrite  ? oner_eq0  .
+      rewrite  //  .
     }
     {
-      rewrite //= ?eqxx ?oner_eq0 // => u _ hu _ .
+      rewrite  //=  .
+      rewrite  ? eqxx  .
+      rewrite  ? oner_eq0  .
+      rewrite  //  .
+      move =>  u _ hu _ .
       congr \pi .
       apply: val_inj .
       rewrite  /=  .
@@ -1107,7 +1367,7 @@ Lemma inv0 : inv 0%:F = 0%:F.
       by [] .
     }
     {
-      rewrite //= ?eqxx ?oner_eq0 // => u _ hu _ .
+      rewrite  //=  .
     }
   }
   {
@@ -1236,7 +1496,42 @@ Lemma tofrac_is_additive: additive tofrac.
   unlock tofrac .
   rewrite  - [(X) in (_ = _ + X)] pi_opp  .
   rewrite  - [(X) in (_ = X)] pi_add  .
-  by rewrite /addf /oppf /= !numden_Ratio ?(oner_neq0, mul1r, mulr1).
+  rewrite  /addf  .
+  rewrite  /oppf  .
+  rewrite  /=  .
+  rewrite  ! numden_Ratio  .
+  {
+    rewrite  ? (oner_neq0, mul1r, mulr1)  .
+    by [] .
+  }
+  {
+    rewrite  ? (oner_neq0, mul1r, mulr1)  .
+    by [] .
+  }
+  {
+    rewrite  ? (oner_neq0, mul1r, mulr1)  .
+    by [] .
+  }
+  {
+    rewrite  ? (oner_neq0, mul1r, mulr1)  .
+    by [] .
+  }
+  {
+    rewrite  ? (oner_neq0, mul1r, mulr1)  .
+    by [] .
+  }
+  {
+    rewrite  ? (oner_neq0, mul1r, mulr1)  .
+    by [] .
+  }
+  {
+    rewrite  ? (oner_neq0, mul1r, mulr1)  .
+    by [] .
+  }
+  {
+    rewrite  ? (oner_neq0, mul1r, mulr1)  .
+    by [] .
+  }
 Qed.
 
 Canonical tofrac_additive := Additive tofrac_is_additive.
@@ -1245,10 +1540,38 @@ Canonical tofrac_additive := Additive tofrac_is_additive.
 Lemma tofrac_is_multiplicative: multiplicative tofrac.
 
   Proof.
-  split=> [p q|//] .
-  unlock tofrac .
-  rewrite -[X in _ = X]pi_mul .
-  by rewrite /mulf /= !numden_Ratio ?(oner_neq0, mul1r, mulr1).
+  split .
+  {
+    move => p q  .
+    unlock tofrac .
+    rewrite -[X in _ = X]pi_mul .
+    rewrite  /mulf  .
+    rewrite  /=  .
+    rewrite  ! numden_Ratio  .
+    {
+      rewrite  ? (oner_neq0, mul1r, mulr1)  .
+      by [] .
+    }
+    {
+      rewrite  ? (oner_neq0, mul1r, mulr1)  .
+      by [] .
+    }
+    {
+      rewrite  ? (oner_neq0, mul1r, mulr1)  .
+      by [] .
+    }
+    {
+      rewrite  ? (oner_neq0, mul1r, mulr1)  .
+      by [] .
+    }
+    {
+      rewrite  ? (oner_neq0, mul1r, mulr1)  .
+      by [] .
+    }
+  }
+  {
+    move => //  .
+  }
 Qed.
 
 Canonical tofrac_rmorphism := AddRMorphism tofrac_is_multiplicative.
@@ -1296,13 +1619,35 @@ Lemma tofrac_eq (p q : R): (p%:F == q%:F) = (p == q).
 
   Proof.
   apply/eqP/eqP=> [|->//] .
-  unlock tofrac=> /eqmodP /eqP /= .
-  by rewrite !numden_Ratio ?(oner_eq0, mul1r, mulr1).
+  unlock tofrac .
+  move =>  /eqmodP /eqP /= .
+  rewrite  ! numden_Ratio  .
+  {
+    rewrite  ? (oner_eq0, mul1r, mulr1)  .
+    by [] .
+  }
+  {
+    rewrite  ? (oner_eq0, mul1r, mulr1)  .
+    by [] .
+  }
+  {
+    rewrite  ? (oner_eq0, mul1r, mulr1)  .
+    by [] .
+  }
+  {
+    rewrite  ? (oner_eq0, mul1r, mulr1)  .
+    by [] .
+  }
+  {
+    rewrite  ? (oner_eq0, mul1r, mulr1)  .
+    by [] .
+  }
 Qed.
 
 Lemma tofrac_eq0 (p : R): (p%:F == 0) = (p == 0).
 
   Proof.
-  by rewrite tofrac_eq.
+  rewrite tofrac_eq .
+  by [] .
 Qed.
 End FracFieldTheory.

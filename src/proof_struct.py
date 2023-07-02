@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Optional, Iterable, Dict
+from typing import List, Optional, Iterable, Dict, Callable
 from dataclasses import dataclass, field
 from typeguard import typechecked
 import copy
@@ -104,6 +104,7 @@ class Proof:
         for x in self.yield_stmts():
             print(x)
 
+    @typechecked
     @staticmethod
     def transform_s(root: Proof, coq: serapi_instance.SerapiInstance,
                     verbose: int = 0) -> Proof:
@@ -120,10 +121,12 @@ class Proof:
         # not sure what I need yet.
         # def cancel_stmt?
 
+        @typechecked
         def transform(node: Proof) -> Tuple[Proof, bool]:
             """
             Returns new node plus whether something changed?
             """
+            #root.pretty_print2()
             @typechecked
             def transform_kids(kids: List[Proof]) -> bool:
                 changed = False
@@ -147,7 +150,9 @@ class Proof:
                     run_stmt(res.tac_str)
                     transform_kids(kids)
                     run_stmt("{")
-                    last_kid = Proof.generate_proof(B, coq, verbose)
+                    last_kid = chain_with_by_and_run(B, run_stmt, coq)
+
+                    # Proof.generate_proof(B, coq, verbose)
                     last_kid.par = res
                     run_stmt("}")
                     kids.append(last_kid)
@@ -168,7 +173,7 @@ class Proof:
 
                     run_stmt(res.tac_str)
                     run_stmt("{")
-                    first_kid = Proof.generate_proof(B, coq, verbose)
+                    first_kid = chain_with_by_and_run(B, run_stmt, coq)
                     first_kid.par = res
                     run_stmt("}")
 
@@ -213,6 +218,53 @@ class Proof:
                     #breakpoint()
                     return A_node, True
 
+                case Proof(tac=Thens(t1=A, t2s=Bs) as thens, kids=B_kids):
+                    #breakpoint()
+                    # run_stmt(thens.get_coq_str())
+                    # transform_kids(B_kids)
+                    # return node, False
+                    # breakpoint()
+                    # assert False
+                    # breakpoint()
+                    proof_map = {kid.goal: kid for kid in B_kids}
+                    A_node = Proof(tac=A, tac_str=A.get_coq_str(), goal=node.goal,
+                                par=node.par)
+                    # goals_before = coq.count_fg_goals()
+                    run_stmt("{")  # A_node
+                    run_stmt(A.get_coq_str())
+
+                    A_kids = A_node.kids  # m1 m2 m3 i mitt exempel
+
+                    assert coq.count_fg_goals() == len(Bs)
+
+                    n = len(Bs)
+                    # I think fg goals goes down to 0 when node.goal is proven.
+                    for i in range(n):
+                        assert coq.count_fg_goals() == n-i
+                        run_stmt("{")  # kid of A_node
+                        # Possibly deep copy problems here? We get
+                        # several refs to 'B'
+                        #breakpoint()
+                        A_kids.append(Bi_node := Proof(tac=copy.deepcopy(Bs[i]),
+                                                       tac_str=Bs[i].get_coq_str(),
+                                                       goal=coq.goals, par=A_node))
+                        run_stmt(Bi_node.tac.get_coq_str())
+                        while coq.count_fg_goals() > 0:
+                            assert coq.goals in proof_map
+                            # Check that they come in order? And that
+                            # there is one of each?
+                            Bi_kid = copy.deepcopy(proof_map[coq.goals])
+                            Bi_kid.par = Bi_node
+                            Bi_node.kids.append(Bi_kid)
+                            run_stmt("{")  # Kid Bi_kid of Bi_node
+                            for cmd in Bi_kid.yield_stmts():
+                                run_stmt(cmd)
+                            run_stmt("}")  # End of kid Bi_kid of Bi_node
+                        run_stmt("}")  # End of A_node kid
+                    run_stmt("}")  # End of A_node
+                    #breakpoint()
+                    return A_node, True
+
                 case Proof(tac=Rewrite(args=[arg1, *rest]), kids=kids,
                            goal=goal) if len(rest) > 0:
                     rw_then = Rewrite(args=[arg1], coq=f"rewrite {arg1}")
@@ -237,11 +289,23 @@ class Proof:
                     #breakpoint()
                     return res, True
 
+                # will not match 'by []'.
+                case Proof(tac=By(tac=by_tac), kids=[], goal=goal) :
+                    new_tac = Then(t1 = by_tac,
+                                   t2 = Node("by []"),
+                                   coq = f"({by_tac.coq}) ; by []"
+                                   )
+                    node.tac = new_tac
+                    run_stmt("{")
+                    run_stmt(new_tac.get_coq_str())
+                    run_stmt("}")
+                    return node, True
+
 
                 # Wasn't so simple: should make it into `Thens` based
                 # on the []-pattern?
                 #
-                case Proof(tac=Intro(tac=before, items=items)) if before != Node('move'):
+                case Proof(tac=Intro(tac=before, items=items)) : #if before != Node('move'):
 
                     return handle_intro_brackets({'before': before,
                                                   'items': items,
@@ -325,33 +389,50 @@ class Proof:
             yield 'Qed.'
 
     # Right abstraction? re-do?
-    @staticmethod
-    def generate_proof(tac: Node, coq: serapi_instance.SerapiInstance,
-                       verbose: int = 0) -> Proof:
-        """
-        Generates a short Proof tree from simple tactic that is assumed to
-        close a goal.
-        """
-        #goal: str = coq.goals
-        res = Proof(goal=coq.goals)
-        match tac:
-            case Then(): assert False
-            case Thens(): assert False
-            case LastFirst(): assert False
-            case LastBy(): assert False
-            case FirstBy(): assert False
-            case By(tac=by_tac):
-                coq.run_stmt("{")
-                res = Proof.generate_proof(by_tac, coq, verbose)
-                assert coq.proof_context.fg_goals == []
-                coq.run_stmt("}")
-                return res
-            case _:
-                tac_str = tac.get_coq_str()
-                coq.run_stmt(tac_str)
-                res.tac_str = tac_str
-                res.tac = tac
-                return res
+    # @staticmethod
+    # def generate_proof(tac: Node, coq: serapi_instance.SerapiInstance,
+    #                    verbose: int = 0) -> Proof:
+    #     """
+    #     Generates a short Proof tree from simple tactic that is assumed to
+    #     close a goal.
+    #     """
+    #     #goal: str = coq.goals
+    #     res = Proof(goal=coq.goals)
+    #     match tac:
+    #         case Then(): assert False
+    #         case Thens(): assert False
+    #         case LastFirst(): assert False
+    #         case LastBy(): assert False
+    #         case FirstBy(): assert False
+    #         case By(tac=by_tac):
+    #             coq.run_stmt("{")
+    #             res = Proof.generate_proof(by_tac, coq, verbose)
+    #             # breakpoint()
+    #             assert coq.proof_context.fg_goals == []
+    #             coq.run_stmt("}")
+    #             return res
+    #         case _:
+    #             tac_str = tac.get_coq_str()
+    #             coq.run_stmt(tac_str)
+    #             res.tac_str = tac_str
+    #             res.tac = tac
+    #             return res
+
+@typechecked
+def chain_with_by_and_run(tac: Node, run_stmt: Callable[[str], None],
+                          coq: serapi_instance.SerapiInstance) -> Proof:
+    assert coq.count_fg_goals() == 1
+    goal = coq.goals
+    tac = Then(t1 = tac,
+               t2 = Node("by []"),
+               coq = f"({tac.coq}) ; by []"
+               )
+    run_stmt(tac.get_coq_str())
+    assert coq.count_fg_goals() == 0
+    return Proof(goal=goal,
+                 tac=tac,
+                 tac_str = tac.get_coq_str())
+
 
 @typechecked
 def handle_intro_brackets(d: Dict[str, Any]) -> Tuple[Proof, bool]:
@@ -371,9 +452,23 @@ def handle_intro_brackets(d: Dict[str, Any]) -> Tuple[Proof, bool]:
     if bracket != None :
         bracket_idx = items.index(bracket)
         before_bracket = items[:bracket_idx]
-    if bracket is None or not all(x.tp == 'const' and x.value in ['/=', '//', '//=']
-                           for x in before_bracket
-                           ):
+
+    #breakpoint()
+
+    # Don't go down in infinite recursion - can't simplify this yet:
+    # move => a b c.
+    if before == Node('move'): # and all(x.tp != 'bracket_pat' for x in items):
+        run_stmt(node.tac_str)
+        changed = transform_kids(node.kids)
+        return node, changed
+
+    # Is no bracket or something apart from simpl commands before it:
+    # then SIMPLE BEHAVIOR.
+    if (bracket is None or
+        before == Node('move') or
+        not all(x.tp == 'const' and x.value in ['/=', '//', '//=']
+                for x in before_bracket
+                )):
 
         move_after_coq = f'move => {after}'
         new_tac = Then(t1 = before,
@@ -393,7 +488,7 @@ def handle_intro_brackets(d: Dict[str, Any]) -> Tuple[Proof, bool]:
         return node, True
 
 
-    # Handle branching
+    # COMPLEX BEHAVIOR
     tac1 = before
     if before_bracket:
         tac1_t1_coq = f'move => {" ".join(it.get_coq_str() for it in before_bracket)}'
@@ -404,32 +499,36 @@ def handle_intro_brackets(d: Dict[str, Any]) -> Tuple[Proof, bool]:
                                ),
                     coq = f'({before.coq}) ; ({tac1_t1_coq})'
                     )
-        branches = []
-        after_bracket = items[bracket_idx+1:]
-        for b_it in bracket.value:
-            b_it_coq_str = b_it.replace(',', '|').replace("'", "")
-            after_coq_str = ' '.join(x.get_coq_str() for x in after_bracket)
-            if b_it_coq_str.strip() == '':
-                b_it_coq_str = '[]'
-            coq_str = f'move => {b_it_coq_str} {after_coq_str}'
 
-            tac2 = Intro(tac=Node('move'), items=I_item.make_items(b_it) +
-                         copy.deepcopy(after_bracket),
-                         coq=coq_str
-                         )
-            branches.append(tac2)
-        thens_t2_coq = ' | '.join(branch.coq for branch in branches)
-
-        new_tac = Thens(t1 = tac1,
-                         t2s = branches,
-                         coq = f'({tac1.coq}) ; [{thens_t2_coq}]'
-                         )
-        print(f"[proof, intro] made '{node.tac}' into '{new_tac}'.")
-        print(f"[proof, intro] made '{node.tac.coq}' into '{new_tac.coq}'.")
-        print(f"[proof, intro] made '{node.tac_str}' into '{new_tac.get_coq_str()}'")
-
-        node.tac = new_tac
-        node.tac_str = node.tac.get_coq_str()
-        run_stmt(node.tac_str)
-        transform_kids(node.kids)
-        return node, True
+    else:
+        tac1 = before
+    branches = []
+    after_bracket = items[bracket_idx+1:]
+    for b_it in bracket.value:
+        b_it_coq_str = str(b_it).replace(',', '|').replace("'", "")
+        after_coq_str = ' '.join(x.get_coq_str() for x in after_bracket)
+        if b_it_coq_str.strip() == '':
+            b_it_coq_str = '[]'
+        coq_str = f'move => {b_it_coq_str} {after_coq_str}'
+        tac2 = Intro(tac=Node('move'), items=I_item.make_items(b_it) +
+                     copy.deepcopy(after_bracket),
+                     coq=coq_str
+                     )
+        branches.append(tac2)
+    thens_t2_coq = ' | '.join(branch.coq for branch in branches)
+    new_tac = Thens(t1 = tac1,
+                     t2s = branches,
+                     coq = f'({tac1.coq}) ; [{thens_t2_coq}]'
+                     )
+    print(f"[proof, intro] made '{node.tac}' into '{new_tac}'.")
+    print(f"[proof, intro] made '{node.tac.coq}' into '{new_tac.coq}'.")
+    print(f"[proof, intro] made '{node.tac_str}' into '{new_tac.get_coq_str()}'")
+    node.tac = new_tac
+    node.tac_str = node.tac.get_coq_str()
+    run_stmt(node.tac_str)
+    transform_kids(node.kids)
+    return node, True
+    # else:
+    #     run_stmt(node.tac_str)
+    #     changed = transform_kids(node.kids)
+    #     return node, changed

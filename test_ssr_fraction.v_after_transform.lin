@@ -25,20 +25,41 @@ Local Open Scope quotient_scope.
 Open Scope quotient_scope.
 
 
-Lemma RatioP (R: ringType) n d : Ratio_spec n d (@Ratio R n d) n d.
+Import FracField.
+
+
+Variable R : idomainType.
+
+Local Notation tofrac := (@FracField.tofrac R).
+
+
+Lemma tofrac_is_multiplicative : multiplicative tofrac.
 
   Proof.
-  rewrite  /Ratio  .
-  rewrite  /insubd  .
-  ((case: insubP) ; (move => /=)) ; [move => x /= d_neq0 hx  | move => [] ] .
+  split=> [p q|//] .
+  unlock tofrac .
+  rewrite -[X in _ = X]pi_mul .
+  rewrite  /mulf  .
+  rewrite  /=  .
+  rewrite  ! numden_Ratio  .
   {
-    have ->: x = @mkRatio R (n, d) d_neq0 by apply: val_inj.
-    by constructor.
+    rewrite  ? (oner_neq0, mul1r, mulr1)  .
+    by [] .
   }
   {
-    rewrite negbK=> /eqP hx .
-    rewrite {2}hx .
-    constructor .
+    rewrite  ? (oner_neq0, mul1r, mulr1)  .
+    by [] .
+  }
+  {
+    rewrite  ? (oner_neq0, mul1r, mulr1)  .
+    by [] .
+  }
+  {
+    rewrite  ? (oner_neq0, mul1r, mulr1)  .
+    by [] .
+  }
+  {
+    rewrite  ? (oner_neq0, mul1r, mulr1)  .
     by [] .
   }
 Qed.
