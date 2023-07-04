@@ -421,6 +421,10 @@ def linearize_proof(coq: serapi_instance.SerapiInstance,
         elif coq.count_fg_goals() > 0:
             #breakpoint()
             # coq.run_stmt(command)
+            print(f"THEOREM NAME: '{theorem_name}'")
+            if theorem_name == 'Lemma ler_norm_add x y':
+                 breakpoint()
+
             node = node.run_stmt(command, coq)
             # ast = coq.get_AST()
             #print(f"Ast is: {ast}")

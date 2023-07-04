@@ -141,6 +141,13 @@ class Proof:
             assert coq.goals == node.goal, f"coq says '{coq.goals}', we think '{node.goal}'"
             match node:
 
+                # move=> []
+                case Proof(tac=Intro(tac=Node(coq='move'), items=[]),
+                           kids=[kid]
+                           ):
+                    kid.par = node.par
+                    return transform(kid)
+
                 # last by
                 case Proof(tac=LastBy(tac=A, by=B), kids=kids):
                     res = Proof(tac=A, tac_str=A.get_coq_str(), par=node.par,
@@ -296,10 +303,66 @@ class Proof:
                                    coq = f"({by_tac.coq}) ; by []"
                                    )
                     node.tac = new_tac
+                    node.tac_str = new_tac.get_coq_str()
                     run_stmt("{")
                     run_stmt(new_tac.get_coq_str())
                     run_stmt("}")
                     return node, True
+
+                case Proof(tac=Intro(tac=Node('move'), items=items), kids=[kid]):
+                    orig_goal = node.goal
+                    # Find first bracket / term / ident / switch
+                    pos = None
+                    for i, it in enumerate(items):
+                        if it.tp != 'switch':
+                            pos = i
+                            break
+
+                    items_s = [it.get_coq_str() for it in items]
+
+                    # If there is a non-switch and there is something after,
+                    # we can break it out.
+                    if pos != None and pos != len(items)-1:
+                        t1_vals = ' '.join(items_s[:pos+1])
+                        t1 = Intro(tac=Node('move'), items=copy.deepcopy(items[:pos+1]),
+                                   coq=f"move=> {t1_vals}"
+                                   )
+
+                        t2_vals = ' '.join(items_s[pos+1:])
+                        t2 = Intro(tac=Node('move'), items=copy.deepcopy(items[pos+1:]),
+                                   coq=f"move=> {t2_vals}"
+                                   )
+                        pf1 = Proof(tac=t1, goal=orig_goal,
+                                    tac_str = t1.get_coq_str(),
+                                    par = node.par
+                                    )
+                        assert coq.count_fg_goals() == 1
+
+                        # if '/eqP' in node.tac.coq:
+                        #     breakpoint()
+                        print(f"[proof, move-intro] making {node.tac.coq} into {t1.coq} . {t2.coq}")
+
+                        run_stmt(t1.get_coq_str())
+                        # breakpoint()
+                        assert coq.count_fg_goals() == 1
+                        new_goal = coq.goals
+                        pf2 = Proof(tac=t2, goal=new_goal,
+                                    tac_str = t2.get_coq_str(),
+                                    par = pf1,
+                                    kids=[kid]
+                                    )
+                        pf1.kids.append(pf2)
+                        run_stmt(t2.get_coq_str())
+                        assert coq.count_fg_goals() == 1
+                        assert coq.goals == kid.goal
+
+                        print(f"[proof, move-intro] made {node.tac.coq} into {t1.coq} . {t2.coq}")
+                        transform_kids(pf2.kids)
+                        return pf1, True
+                    else:
+                        run_stmt(node.tac.get_coq_str())
+                        changed = transform_kids(node.kids)
+                        return node, changed
 
 
                 # Wasn't so simple: should make it into `Thens` based
@@ -504,12 +567,14 @@ def handle_intro_brackets(d: Dict[str, Any]) -> Tuple[Proof, bool]:
         tac1 = before
     branches = []
     after_bracket = items[bracket_idx+1:]
+    # breakpoint()
     for b_it in bracket.value:
         b_it_coq_str = str(b_it).replace(',', '|').replace("'", "")
         after_coq_str = ' '.join(x.get_coq_str() for x in after_bracket)
         if b_it_coq_str.strip() == '':
             b_it_coq_str = '[]'
         coq_str = f'move => {b_it_coq_str} {after_coq_str}'
+        # TODO BUG in make_items (or in the way we call it, is it a string?)
         tac2 = Intro(tac=Node('move'), items=I_item.make_items(b_it) +
                      copy.deepcopy(after_bracket),
                      coq=coq_str
